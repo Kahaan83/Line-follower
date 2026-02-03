@@ -1,6 +1,3 @@
-This is a professional and comprehensive `README.md` file tailored specifically to your code. It explains the PID logic, the hardware setup, and how the sensor weighting works.
-
----
 
 # PID Line Follower Robot
 
