@@ -1,88 +1,116 @@
+# 🤖 Self-Balancing Robot (PID & Kalman Filter)
 
-# PID Line Follower Robot
+![C++](https://img.shields.io/badge/Language-C++-blue.svg)
+![Hardware](https://img.shields.io/badge/Hardware-Arduino%20%7C%20MPU6050-orange.svg)
+![Status](https://img.shields.io/badge/Status-Completed-success.svg)
 
-A high-performance Arduino-based line follower robot utilizing a 5-sensor array and a PD (Proportional-Derivative) control algorithm for smooth and precise path tracking.
+> **🥇 First Place — University-wide Robotics Competition, June 2025**
 
-## 🚀 Features
+## 📖 Overview
 
-* **PD Control Logic:** Uses Proportional and Derivative gains ( and ) to minimize oscillation and handle sharp turns.
-* **Weighted Sensor Positioning:** Calculates the exact deviation from the center line using a weighted average of 5 infrared sensors.
-* **Dynamic Motor Mixing:** Adjusts individual motor speeds in real-time to maintain course.
-* **Anti-Hum Logic:** Ensures motors receive enough PWM duty cycle to overcome static friction at low speeds.
-* **Active Braking:** Supports reverse motor rotation for tighter, more aggressive corrections.
+This project is a two-wheeled self-balancing robot based on the inverted
+pendulum concept. It utilizes a closed-loop control system to maintain
+stability in real-time.
 
-## 🛠 Hardware Requirements
+The system reads orientation data (pitch angle) from an IMU sensor, filters
+the noise using a **Kalman Filter**, and computes the necessary motor
+adjustments using a **PID (Proportional-Integral-Derivative)** controller.
 
-* **Microcontroller:** Arduino Uno/Nano or compatible.
-* **Sensors:** 5-Channel IR Sensor Array (Digital output).
-* **Motor Driver:** L298N or L293D Dual H-Bridge.
-* **Chassis:** 2WD Robot Chassis.
+<!--
+  TODO: Add a photo or short GIF of the robot balancing here, e.g.:
+  ![Robot balancing demo](assets/balance-demo.gif)
+  Drop the file into an `assets/` folder in this repo and update the path above.
+-->
 
-## 📌 Pin Mapping
+## 🚀 Key Features
 
-### IR Sensors (Analog Pins used as Digital)
+* **Real-Time Stability:** Maintains vertical balance within ±2 degrees of error.
+* **Sensor Fusion:** Implements a **Kalman Filter** to merge accelerometer data
+  (noisy) and gyroscope data (prone to drift) for precise angle estimation.
+* **PID Control Loop:** Custom-tuned P, I, and D parameters for rapid response
+  to external disturbances.
+* **Wireless Tuning:** Integration of a Bluetooth module for real-time
+  parameter tuning without re-uploading code.
 
-| Sensor | Pin | Position |
-| --- | --- | --- |
-| S1 | A4 | Far Left |
-| S2 | A3 | Left |
-| S3 | A2 | Center |
-| S4 | A1 | Right |
-| S5 | A0 | Far Right |
+## 🛠️ Hardware Stack
 
-### Motor Driver
+* **Microcontroller:** Arduino Uno / Nano
+* **Sensor:** MPU6050 (6-Axis Accelerometer & Gyroscope)
+* **Motor Driver:** L298N H-Bridge Module
+* **Actuators:** 2x High-torque DC Gear Motors
+* **Power:** 12V Li-ion Battery Pack
+* **Communication:** HC-05 Bluetooth Module
 
-| Component | Pin | Function |
-| --- | --- | --- |
-| **Right Motor** | 2 | IN1 |
-|  | 3 | Speed (PWM) |
-|  | 4 | IN2 |
-| **Left Motor** | 7 | IN1 |
-|  | 8 | IN2 |
-|  | 9 | Speed (PWM) |
+## 💻 Software & Algorithms
 
-## ⚙️ How it Works
+### 1. The Kalman Filter
 
-### 1. Position Calculation
-
-The code assigns a numerical weight to each sensor:
-
-* Far Left: `-2000` | Center: `0` | Far Right: `+2000`
-The `getPosition()` function calculates the weighted average. If no line is detected, it returns a special value (`9999`) to tell the robot to use its last known error.
-
-### 2. PD Algorithm
-
-The correction value is calculated as:
+Raw sensor data is inherently imperfect. The accelerometer is sensitive to
+vibrations, while the gyroscope drifts over time. A Kalman Filter is used to
+estimate the "true angle."
 
 ```cpp
-correction = (Kp * P) + (Kd * D)
+// Pseudocode logic used in the project
+float kalmanCalculate(float newAngle, float newRate, float dt) {
+    // Predict phase
+    rate = newRate - bias;
+    angle += dt * rate;
 
+    // Update phase (correction based on error covariance)
+    // ... matrix math for gain calculation ...
+    return angle;
+}
 ```
 
-* **Proportional (P):** Current distance from the center.
-* **Derivative (D):** The rate of change of the error (prevents overshooting).
+### 2. PID Control
 
-### 3. Tuning
+The robot corrects its tilt by driving the wheels in the direction of the
+fall. The PID controller calculates the motor speed (`Output`) based on the
+error (`SetPoint - CurrentAngle`).
 
-You can modify these variables in the code to suit your specific track and motor power:
+* **Proportional (Kp):** Reacts to the current error (leaning angle).
+* **Integral (Ki):** Reacts to the accumulation of past errors (eliminates
+  steady-state drift).
+* **Derivative (Kd):** Predicts future error based on the rate of change
+  (dampens oscillations).
 
-* `LEFT_BASE` / `RIGHT_BASE`: The cruising speed of the robot.
-* `Kp`: Increase for sharper response; decrease if the robot wobbles.
-* `Kd`: Increase to dampen the wobbling effect.
+## 🔌 Pinout / Wiring
 
-## 💻 Installation
+| Component | Pin (Arduino) |
+| --- | --- |
+| **MPU6050 SDA** | A4 |
+| **MPU6050 SCL** | A5 |
+| **Motor Enable A** | 9 (PWM) |
+| **Motor Enable B** | 10 (PWM) |
+| **Bluetooth TX** | RX |
+| **Bluetooth RX** | TX |
 
-1. Clone the repository:
-```bash
-git clone https://github.com/Kahaan83/Line-follower.git
+## ⚙️ Installation & Usage
 
-```
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/Kahaan83/Self-Balancing-robot.git
+   ```
+2. **Open the project:** Open `balance.ino` in the Arduino IDE.
+3. **Install dependencies:** Ensure you have the `Wire.h` and `MPU6050`
+   libraries installed via the Library Manager.
+4. **Upload:** Connect your board via USB and upload the code.
+5. **Calibration:** Place the robot on a flat surface and hold it upright
+   before powering on to calibrate the gyro offsets.
 
+## 📈 Future Improvements
 
-2. Open `Line-follower.ino` in the Arduino IDE.
-3. Select your Board and Port.
-4. Click **Upload**.
+* Implement a remote control feature via a mobile app.
+* Upgrade to an ESP32 for faster processing and Wi-Fi telemetry.
+* Add obstacle avoidance using ultrasonic sensors.
 
-## 📝 License
+## 👤 Author
 
-This project is open-source. Feel free to use and modify it for your own robot builds!
+**Kahaan Shah**
+
+* [GitHub](https://github.com/Kahaan83)
+* [LinkedIn](https://www.linkedin.com/in/kahaan-shah-842095334/)
+
+---
+
+*This project was built as part of the University Robotics Competition 2025.*
